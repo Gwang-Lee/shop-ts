@@ -1,47 +1,30 @@
-import { useState } from "react";
-import { UserContext } from "./UserContext";
-import type { User, NewUser, LoginForm } from "../types/user";
-import { initialUsers } from "../datas/users";
+import { useEffect, useState } from "react"
+import { ProductContext } from "./ProductContext"
+import type {NewProduct, Product} from "../types/product"
+import { getProducts, createProduct } from "../api/products"
 
-const UserProvider = ({children}: {children: React.ReactNode}) => {
-    const [users, setUsers] = useState<User[]>(initialUsers);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+// ProductProvider는 저장소(repository) 역할
+const ProductProvider = ({children} : {children: React.ReactNode}) => {
+    const [products, setProducts] = useState<Product[]>([]);
 
-    // 회원가입 함수
-    const signup = ( newUser: NewUser) => {
-        // 가입한 1명 회원
-        const user: User = {...newUser, id: Date.now()}
-        setUsers([...users, user])
-    }
-
-    // 로그인 함수
-    const login = (loginForm: LoginForm) => {
-        // 회원 목록에서 로그인한 1명의 회원 검색
-        const found = users.find(user => 
-            user.username === loginForm.username && 
-                user.password === loginForm.password)
-        if(!found) 
-            return false; // 회원이 없어서 false로 반환함
-        setCurrentUser(found);  //회원이 있는경우 true 반환
-        return true;
-    }
-
-    // 로그아웃 함수
-    const logout = () => {
-        setCurrentUser(null);
+    // 상품 목록 불러오기(화면이 렌더링될때 한 번 가져옴)
+    useEffect(() => {
+        getProducts()
+            .then(setProducts)
+            .catch(err => console.log("상품 목록 조회 오류", err))
+    }, []);
+    
+    // 상품 추가 함수
+    const addProduct = async (newProduct: NewProduct) => {
+        await createProduct(newProduct); // DB에 상품 등록
+        setProducts(await getProducts()); // 등록된 상품을 배열에 저장
     }
 
     return(
-        <UserContext.Provider value={{ 
-            users, 
-            signup,
-            currentUser,
-            login,
-            logout
-         }}>
+        <ProductContext.Provider value={{products, addProduct}}>
             {children}
-        </UserContext.Provider>
+        </ProductContext.Provider>
     )
 }
 
-export default UserProvider;
+export default ProductProvider
