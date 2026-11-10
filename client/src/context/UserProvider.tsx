@@ -1,30 +1,52 @@
-import { useEffect, useState } from "react"
-import { ProductContext } from "./ProductContext"
-import type {NewProduct, Product} from "../types/product"
-import { getProducts, createProduct } from "../api/products"
+import { useEffect, useState } from "react";
+import { createUser, getUsers, requestLogin } from "../api/users";
+import type { LoginForm, NewUser, User } from "../types/user";
+import { UserContext } from "./UserContext";
 
-// ProductProvider는 저장소(repository) 역할
-const ProductProvider = ({children} : {children: React.ReactNode}) => {
-    const [products, setProducts] = useState<Product[]>([]);
+const UserProvider = ({children}: {children: React.ReactNode}) => {
+    const [users, setUsers] = useState<User[]>([]); //빈 배열
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-    // 상품 목록 불러오기(화면이 렌더링될때 한 번 가져옴)
+    // 회원 목록 조회
     useEffect(() => {
-        getProducts()
-            .then(setProducts)
-            .catch(err => console.log("상품 목록 조회 오류", err))
+        getUsers()   //함수 호출
+            .then(setUsers)
+            .catch(err => console.log("회원목록 조회 오류!", err));
     }, []);
-    
-    // 상품 추가 함수
-    const addProduct = async (newProduct: NewProduct) => {
-        await createProduct(newProduct); // DB에 상품 등록
-        setProducts(await getProducts()); // 등록된 상품을 배열에 저장
+
+    // 회원가입 함수
+    const signup = async ( newUser: NewUser) => {
+        await createUser(newUser); // DB 저장
+        setUsers(await getUsers()); // 회원 배열에 저장
+    }
+
+    // 로그인 함수 - loginForm(username, password)
+    const login = async (loginForm: LoginForm) => {
+       try{
+          const user = await requestLogin(loginForm);
+          setCurrentUser(user);  //로그인한 유저를 저장
+          return true;
+       }catch{
+          return false;
+       }
+    }
+
+    // 로그아웃 함수
+    const logout = () => {
+        setCurrentUser(null);
     }
 
     return(
-        <ProductContext.Provider value={{products, addProduct}}>
+        <UserContext.Provider value={{ 
+            users, 
+            signup,
+            currentUser,
+            login,
+            logout
+         }}>
             {children}
-        </ProductContext.Provider>
+        </UserContext.Provider>
     )
 }
 
-export default ProductProvider
+export default UserProvider;
